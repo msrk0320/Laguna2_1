@@ -32,6 +32,8 @@ export default function AnimatedChart({
   const getX = (ctxIndex) => padL + (ctxIndex / Math.max(uniqueContexts.length - 1, 1)) * plotW;
   const getY = (val) => padT + plotH - ((val || 0) / maxVal) * plotH;
 
+  const dataKey = data.map(d => `${d.id || d.context}-${d[metric]}`).join('|');
+
   // GSAP path draw animation on metric or data change
   useEffect(() => {
     if (!svgRef.current) return;
@@ -62,7 +64,7 @@ export default function AnimatedChart({
         { scale: 1, duration: 0.4, stagger: 0.03, ease: 'back.out(1.7)' }
       );
     }
-  }, [data, metric, chartType]);
+  }, [dataKey, metric, chartType]);
 
   return (
     <div className="glass-panel chart-card">

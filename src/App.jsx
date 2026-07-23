@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import StatCards from './components/StatCards';
 import ControlBar from './components/ControlBar';
@@ -29,17 +29,19 @@ export default function App() {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Filtered dataset for charts and table
-  const filteredData = data.filter(item => {
-    const matchContext = selectedContext === 'ALL' || item.context_label === selectedContext;
-    const matchBuild = selectedBuild === 'ALL' || item.label === selectedBuild;
-    const matchSearch = !searchQuery || 
-      item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      item.context_label.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchContext && matchBuild && matchSearch;
-  });
+  // Filtered dataset for charts and table (memoized to prevent new reference on tooltip updates)
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      const matchContext = selectedContext === 'ALL' || item.context_label === selectedContext;
+      const matchBuild = selectedBuild === 'ALL' || item.label === selectedBuild;
+      const matchSearch = !searchQuery || 
+        item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        item.context_label.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchContext && matchBuild && matchSearch;
+    });
+  }, [data, selectedContext, selectedBuild, searchQuery]);
 
-  const handleHoverPoint = (e, row, metric, unitSuffix) => {
+  const handleHoverPoint = useCallback((e, row, metric, unitSuffix) => {
     const metricName = metric === 'prefill_tok_s' ? 'Prefill' : 'Gen';
     const val = row[metric];
     const html = `<strong>${row.label} · ${row.context_label}</strong><br/>${metricName}: ${val}${unitSuffix}`;
@@ -49,11 +51,11 @@ export default function App() {
       y: e.clientY - 10,
       html
     });
-  };
+  }, []);
 
-  const handleLeavePoint = () => {
+  const handleLeavePoint = useCallback(() => {
     setTooltip(prev => ({ ...prev, visible: false }));
-  };
+  }, []);
 
   // Export functions
   const handleExportCSV = () => {
