@@ -1,0 +1,366 @@
+<title>Laguna-S-2.1 — Local Inference Leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --surface-0:#eef1f0; --surface-1:#ffffff; --surface-2:#e2e6e5;
+    --ink-900:#14181c; --ink-600:#4a545c; --ink-400:#7c8890;
+    --line:#cdd3d2;
+    --accent:#c96a2e; --accent-ink:#fffaf5;
+    --accent-2:#008a9c;
+    --good:#2f8f5b; --warn:#b8791f; --critical:#b23a3a;
+    --font-display:'Bahnschrift','DIN Alternate','Arial Narrow',sans-serif;
+    --font-body:'Constantia',Georgia,'Iowan Old Style',serif;
+    --font-mono:'Consolas','Cascadia Mono','SF Mono','Roboto Mono',monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-0:#10141a; --surface-1:#171c23; --surface-2:#1f252d;
+      --ink-900:#eef1f3; --ink-600:#aab3ba; --ink-400:#737e87;
+      --line:#2a313a;
+      --accent:#cc6f30; --accent-ink:#100b04;
+      --accent-2:#1fa0b0;
+      --good:#3c9a68; --warn:#b78a28; --critical:#d1495c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-0:#10141a; --surface-1:#171c23; --surface-2:#1f252d;
+    --ink-900:#eef1f3; --ink-600:#aab3ba; --ink-400:#737e87;
+    --line:#2a313a;
+    --accent:#cc6f30; --accent-ink:#100b04;
+    --accent-2:#1fa0b0;
+    --good:#3c9a68; --warn:#b78a28; --critical:#d1495c;
+  }
+  :root[data-theme="light"]{
+    --surface-0:#eef1f0; --surface-1:#ffffff; --surface-2:#e2e6e5;
+    --ink-900:#14181c; --ink-600:#4a545c; --ink-400:#7c8890;
+    --line:#cdd3d2;
+    --accent:#c96a2e; --accent-ink:#fffaf5;
+    --accent-2:#008a9c;
+    --good:#2f8f5b; --warn:#b8791f; --critical:#b23a3a;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--surface-0); color:var(--ink-900);
+    font-family:var(--font-body); line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--accent); color:var(--accent-ink); }
+
+  .page{ max-width:920px; margin:0 auto; padding:48px 24px 80px; }
+
+  .eyebrow{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:.14em;
+    color:var(--accent); margin:0 0 10px; text-transform:uppercase;
+  }
+  h1{
+    font-family:var(--font-display); font-weight:700;
+    font-size:clamp(28px,4.4vw,42px); line-height:1.08; margin:0 0 12px;
+    text-wrap:balance;
+  }
+  .sub{ color:var(--ink-600); max-width:62ch; margin:0; font-size:15.5px; }
+
+  h2{
+    font-family:var(--font-display); font-weight:700; font-size:19px;
+    margin:0 0 6px; text-wrap:balance;
+  }
+
+  .stats{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    background:var(--line); border:1px solid var(--line); border-radius:10px;
+    overflow:hidden; margin:36px 0;
+  }
+  .stat{ background:var(--surface-1); padding:18px 20px; }
+  .stat .label{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-400); margin:0 0 8px;
+  }
+  .stat .value{
+    font-family:var(--font-mono); font-variant-numeric:tabular-nums;
+    font-size:26px; font-weight:600; color:var(--ink-900); margin:0;
+  }
+  .stat .value small{ font-size:13px; color:var(--ink-600); font-weight:400; }
+  .stat .foot{ font-size:12.5px; color:var(--ink-600); margin:4px 0 0; }
+
+  .charts{
+    display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:40px 0;
+  }
+  .chart-card{
+    background:var(--surface-1); border:1px solid var(--line);
+    border-radius:10px; padding:20px 20px 8px;
+  }
+  .chart-note{ font-size:13px; color:var(--ink-600); margin:0 0 14px; }
+  .chart-card svg{ width:100%; height:auto; overflow:visible; }
+  .gridline{ stroke:var(--line); stroke-width:1; }
+  .axis-label{
+    font-family:var(--font-mono); font-size:10.5px; fill:var(--ink-400);
+  }
+  .series-line{ fill:none; stroke:var(--accent); stroke-width:2; }
+  .series-dot{ fill:var(--surface-1); stroke:var(--accent); stroke-width:2; }
+  .series-dot:hover{ stroke-width:3; cursor:pointer; }
+  .series-label{
+    font-family:var(--font-mono); font-size:11px; fill:var(--accent); font-weight:600;
+  }
+  .empty-note{
+    font-size:12.5px; color:var(--ink-400); font-style:italic; margin-top:10px;
+  }
+
+  .tooltip{
+    position:fixed; pointer-events:none; z-index:30;
+    background:var(--ink-900); color:var(--surface-1);
+    font-family:var(--font-mono); font-size:12px; font-variant-numeric:tabular-nums;
+    padding:6px 9px; border-radius:6px; opacity:0; transform:translateY(4px);
+    transition:opacity .1s ease, transform .1s ease; white-space:nowrap;
+  }
+  .tooltip.show{ opacity:1; transform:translateY(0); }
+
+  .findings{
+    display:flex; flex-direction:column; gap:10px; margin:40px 0;
+  }
+  .finding{
+    display:grid; grid-template-columns:5px 1fr; gap:14px;
+    background:var(--surface-1); border:1px solid var(--line);
+    border-radius:8px; padding:14px 18px 14px 0; align-items:start;
+  }
+  .finding .bar{ align-self:stretch; border-radius:3px; background:var(--accent-2); }
+  .finding.warn .bar{ background:var(--warn); }
+  .finding p{ margin:0; font-size:14.5px; }
+  .finding .tag{
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-400); display:block; margin-bottom:4px;
+  }
+
+  .table-section{ margin:40px 0; }
+  .table-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:10px; }
+  table{ width:100%; border-collapse:collapse; min-width:640px; }
+  thead th{
+    text-align:left; font-family:var(--font-mono); font-size:11px;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--ink-400);
+    background:var(--surface-2); padding:10px 14px; border-bottom:1px solid var(--line);
+    position:sticky; top:0;
+  }
+  tbody td{
+    padding:10px 14px; border-bottom:1px solid var(--line);
+    font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:13.5px;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody td.label-cell{ font-family:var(--font-body); font-variant-numeric:normal; }
+  .pill{
+    display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px;
+    font-family:var(--font-mono); background:var(--surface-2); color:var(--ink-600);
+  }
+
+  .howto{
+    margin-top:52px; padding-top:28px; border-top:1px solid var(--line);
+  }
+  .howto p{ font-size:14.5px; color:var(--ink-600); max-width:64ch; }
+  .howto code{
+    font-family:var(--font-mono); background:var(--surface-2); padding:1px 6px;
+    border-radius:4px; font-size:13px;
+  }
+  .howto pre{
+    background:var(--surface-1); border:1px solid var(--line); border-radius:8px;
+    padding:14px 16px; overflow-x:auto; margin:12px 0;
+  }
+  .howto pre code{ background:none; padding:0; font-size:13px; color:var(--ink-900); }
+
+  @media (max-width:680px){
+    .charts{ grid-template-columns:1fr; }
+    .stats{ grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .tooltip{ transition:none; }
+  }
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">Bench log</p>
+    <h1>Laguna-S-2.1 — local inference leaderboard</h1>
+    <p class="sub">RTX 4070 SUPER (12GB VRAM) · Ryzen 9 7950X3D · 64GB RAM · UD-IQ4_XS quant, 57.6GB · llama.cpp mainline vs Poolside fork (branch laguna, HEAD 04b2b72cb), full sweep both builds.</p>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="charts">
+    <div class="chart-card">
+      <h2>Prefill speed</h2>
+      <p class="chart-note">Cold prefill of a fixed 2,472-token prompt, at each configured context ceiling.</p>
+      <svg id="chart-prefill" viewBox="0 0 400 220"></svg>
+    </div>
+    <div class="chart-card">
+      <h2>Generation speed</h2>
+      <p class="chart-note">Decode speed once the prompt prefix is cached (isolates generation from prefill).</p>
+      <svg id="chart-gen" viewBox="0 0 400 220"></svg>
+    </div>
+  </section>
+
+  <section class="findings" id="findings"></section>
+
+  <section class="table-section">
+    <h2>Full results</h2>
+    <p class="chart-note">Source of truth for the charts above — one row per sweep run.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Build</th><th>Context</th><th>Prefill tok/s</th><th>Gen tok/s</th>
+            <th>Peak VRAM</th><th>Peak RAM</th><th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="howto">
+    <h2>Adding a run</h2>
+    <p>Both builds are fully swept now (128K–1M). To add a new quant, model, or a rebuilt fork, run the sweep unattended and fold the new rows into this page's data.</p>
+    <pre><code>.\bench-sweep.ps1 -Label &lt;new-label&gt; -ServerExe "&lt;path-to-llama-server.exe&gt;"</code></pre>
+    <p>Results land in <code>bench\results.json</code>. Paste the new objects into the <code>DATA</code> array at the bottom of this file's script and redeploy — the charts, stats, and table all read from that one array. 128K VRAM/RAM is missing for both current builds (monitor wasn't attached that run) — worth backfilling if you re-run it.</p>
+  </footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // Source of truth. One row per (build label, context size) sweep result.
+  // Real measured numbers, mainline llama.cpp, this rig, fixed 2472-token prompt.
+  const DATA = [
+    { label:"mainline", context:131072,  context_label:"128K", prefill_tok_s:117.5, gen_tok_s:12.20, peak_vram_gb:null, peak_ram_gb:null, date:"2026-07-24" },
+    { label:"mainline", context:262144,  context_label:"256K", prefill_tok_s:117.1, gen_tok_s:12.28, peak_vram_gb:9.86, peak_ram_gb:57.9, date:"2026-07-24" },
+    { label:"mainline", context:524288,  context_label:"512K", prefill_tok_s:39.3,  gen_tok_s:8.84,  peak_vram_gb:11.3, peak_ram_gb:61.0, date:"2026-07-24" },
+    { label:"mainline", context:1048576, context_label:"1M",   prefill_tok_s:24.4,  gen_tok_s:7.58,  peak_vram_gb:11.3, peak_ram_gb:63.4, date:"2026-07-24" },
+    { label:"poolside-fork", context:131072,  context_label:"128K", prefill_tok_s:112.6, gen_tok_s:12.06, peak_vram_gb:null, peak_ram_gb:null, date:"2026-07-24" },
+    { label:"poolside-fork", context:262144,  context_label:"256K", prefill_tok_s:95.8,  gen_tok_s:9.94,  peak_vram_gb:9.78, peak_ram_gb:56.4, date:"2026-07-24" },
+    { label:"poolside-fork", context:524288,  context_label:"512K", prefill_tok_s:87.7,  gen_tok_s:11.24, peak_vram_gb:11.5, peak_ram_gb:60.0, date:"2026-07-24" },
+    { label:"poolside-fork", context:1048576, context_label:"1M",   prefill_tok_s:21.7,  gen_tok_s:6.99,  peak_vram_gb:11.4, peak_ram_gb:63.4, date:"2026-07-24" },
+  ];
+  const LABEL_ORDER = ["mainline", "poolside-fork"]; // fixed categorical order, never cycled
+
+  const CATEGORICAL = { "mainline": "var(--accent)", "poolside-fork": "var(--accent-2)" };
+  const tooltip = document.getElementById("tooltip");
+
+  function showTip(evt, html){
+    tooltip.innerHTML = html;
+    tooltip.style.left = (evt.clientX + 14) + "px";
+    tooltip.style.top = (evt.clientY - 10) + "px";
+    tooltip.classList.add("show");
+  }
+  function hideTip(){ tooltip.classList.remove("show"); }
+
+  // ---- stat tiles ----
+  function renderStats(){
+    const el = document.getElementById("stats");
+    el.innerHTML = `
+      <div class="stat">
+        <p class="label">Prefill crossover @ 512K</p>
+        <p class="value">87.7 <small>vs 39.3 tok/s</small></p>
+        <p class="foot">fork avoids mainline's 3x crater here — but loses again at 1M</p>
+      </div>
+      <div class="stat">
+        <p class="label">Generation, no clean winner</p>
+        <p class="value">7–12 <small>tok/s, either build</small></p>
+        <p class="foot">both degrade similarly once RAM nears 64GB at 1M</p>
+      </div>
+      <div class="stat">
+        <p class="label">VRAM/RAM ceiling</p>
+        <p class="value">~11.4 <small>GB VRAM, both builds match</small></p>
+        <p class="foot">RAM is the real ceiling: 63.4/64GB at 1M, both builds</p>
+      </div>`;
+  }
+
+  // ---- line charts (small multiples, one per metric) ----
+  function buildChart(svgId, metric, unitSuffix){
+    const svg = document.getElementById(svgId);
+    // shared x-axis = every context size any label has been run at
+    const axis = [...new Set(DATA.map(d => d.context))].sort((a,b) => a-b);
+    const labels = LABEL_ORDER.filter(l => DATA.some(d => d.label === l));
+    const W = 400, H = 220, padL = 34, padR = 12, padT = 10, padB = 28;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxY = Math.max(...DATA.map(r => r[metric])) * 1.15;
+    const x = i => padL + (i / (axis.length - 1)) * plotW;
+    const y = v => padT + plotH - (v / maxY) * plotH;
+
+    let svgContent = "";
+    // gridlines (recessive) at 0/50/100%
+    [0, 0.5, 1].forEach(t => {
+      const gy = padT + plotH * (1 - t);
+      svgContent += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" />`;
+      svgContent += `<text class="axis-label" x="${padL-6}" y="${gy+3}" text-anchor="end">${Math.round(maxY*t)}</text>`;
+    });
+    // x labels
+    axis.forEach((ctx,i) => {
+      const row = DATA.find(d => d.context === ctx);
+      svgContent += `<text class="axis-label" x="${x(i)}" y="${H-8}" text-anchor="middle">${row.context_label}</text>`;
+    });
+
+    const dotMeta = [];
+    labels.forEach(label => {
+      const rows = DATA.filter(d => d.label === label);
+      const color = CATEGORICAL[label] || "var(--ink-400)";
+      const pts = rows.map(r => ({ i: axis.indexOf(r.context), r }));
+      if (pts.length > 1) {
+        const d = pts.map((p,idx) => `${idx===0?"M":"L"} ${x(p.i)} ${y(p.r[metric])}`).join(" ");
+        svgContent += `<path class="series-line" style="stroke:${color}" d="${d}" />`;
+      }
+      const first = pts[0];
+      svgContent += `<text class="series-label" style="fill:${color}" x="${x(first.i)}" y="${y(first.r[metric]) - 10}">${label}</text>`;
+      pts.forEach(p => {
+        svgContent += `<circle class="series-dot" style="stroke:${color}" cx="${x(p.i)}" cy="${y(p.r[metric])}" r="5" data-label="${label}" data-i="${p.i}" />`;
+        dotMeta.push({ label, r: p.r });
+      });
+    });
+    svg.innerHTML = svgContent;
+
+    svg.querySelectorAll(".series-dot").forEach((dot, idx) => {
+      const r = dotMeta[idx].r;
+      const html = `<strong>${dotMeta[idx].label} · ${r.context_label}</strong> — ${r[metric]}${unitSuffix}`;
+      dot.addEventListener("mouseenter", e => showTip(e, html));
+      dot.addEventListener("mousemove", e => showTip(e, html));
+      dot.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  // ---- findings ----
+  const FINDINGS = [
+    { tag:"No clean winner", warn:false, text:"Mainline wins prefill at 128K (117.5 vs 112.6) and 256K (117.1 vs 95.8). Poolside wins big at 512K (87.7 vs 39.3 — mainline's crater doesn't happen on the fork). Mainline wins again at 1M (24.4 vs 21.7). Progress logs were smooth in every run — a real scaling-behavior difference between builds, not measurement noise, but it doesn't make either build uniformly faster." },
+    { tag:"Decode", warn:false, text:"Both builds hover 7–12 tok/s with no consistent winner, and both degrade similarly at 1M as RAM nears its ceiling." },
+    { tag:"Cost of headroom", warn:false, text:"On both builds, prefill speed drops hard as configured <code>-c</code> grows even for the same fixed prompt — that's the cost of the allocated context capacity itself, not of tokens actually used." },
+    { tag:"VRAM tracks context, modestly", warn:false, text:"VRAM isn't flat — it climbs from ~9.8GB at 256K to ~11.4GB at 512K/1M, matching within ~0.2GB between builds at every size. Prefix-cache re-hits stay under 0.2s on both, every time (<code>sim_best=1.000</code>)." },
+    { tag:"Real ceiling", warn:true, text:"RAM, not VRAM, is what actually runs out at 1M — 63.4 of 64GB on both builds. 128K VRAM/RAM wasn't captured (monitor wasn't attached to that run)." },
+    { tag:"Not fork-specific", warn:false, text:"The tokenizer's <code>special_eos_id</code>/<code>special_eot_id</code> metadata warnings fire on both builds — a GGUF metadata issue, not something the fork fixes or mainline uniquely has." },
+  ];
+  function renderFindings(){
+    document.getElementById("findings").innerHTML = FINDINGS.map(f => `
+      <div class="finding ${f.warn ? "warn" : ""}">
+        <div class="bar"></div>
+        <p><span class="tag">${f.tag}</span>${f.text}</p>
+      </div>`).join("");
+  }
+
+  // ---- table ----
+  function renderTable(){
+    document.getElementById("table-body").innerHTML = DATA.map(r => `
+      <tr>
+        <td class="label-cell"><span class="pill" style="color:${CATEGORICAL[r.label]||"var(--ink-600)"}">${r.label}</span></td>
+        <td>${r.context_label}</td>
+        <td>${r.prefill_tok_s}</td>
+        <td>${r.gen_tok_s}</td>
+        <td>${r.peak_vram_gb != null ? r.peak_vram_gb + "GB" : "—"}</td>
+        <td>${r.peak_ram_gb != null ? r.peak_ram_gb + "GB" : "—"}</td>
+        <td>${r.date}</td>
+      </tr>`).join("");
+  }
+
+  renderStats();
+  buildChart("chart-prefill", "prefill_tok_s", " tok/s");
+  buildChart("chart-gen", "gen_tok_s", " tok/s");
+  renderFindings();
+  renderTable();
+})();
+</script>
