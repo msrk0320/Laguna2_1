@@ -13,7 +13,7 @@ export default function ControlBar({
   onExportCSV,
   onExportJSON
 }) {
-  const contextOptions = ['ALL', '128K', '256K', '512K', '1M'];
+  const contextOptions = ['ALL', '4K', '8K', '16K', '32K', '64K', '128K', '256K', '512K', '1M'];
   const buildOptions = ['ALL', 'mainline', 'poolside-fork'];
 
   return (

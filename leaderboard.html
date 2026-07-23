@@ -178,7 +178,7 @@
   <header>
     <p class="eyebrow">Bench log</p>
     <h1>Laguna-S-2.1 — local inference leaderboard</h1>
-    <p class="sub">RTX 4070 SUPER (12GB VRAM) · Ryzen 9 7950X3D · 64GB RAM · UD-IQ4_XS quant, 57.6GB · llama.cpp mainline vs Poolside fork (branch laguna, HEAD 04b2b72cb), full sweep both builds.</p>
+    <p class="sub">RTX 4070 SUPER (12GB VRAM) · Ryzen 9 7950X3D · 64GB RAM · UD-IQ4_XS quant, 57.6GB · llama.cpp mainline vs Poolside fork (branch laguna, HEAD 04b2b72cb), full sweep both builds, 4K–1M.</p>
   </header>
 
   <section class="stats" id="stats"></section>
@@ -216,9 +216,9 @@
 
   <footer class="howto">
     <h2>Adding a run</h2>
-    <p>Both builds are fully swept now (128K–1M). To add a new quant, model, or a rebuilt fork, run the sweep unattended and fold the new rows into this page's data.</p>
-    <pre><code>.\bench-sweep.ps1 -Label &lt;new-label&gt; -ServerExe "&lt;path-to-llama-server.exe&gt;"</code></pre>
-    <p>Results land in <code>bench\results.json</code>. Paste the new objects into the <code>DATA</code> array at the bottom of this file's script and redeploy — the charts, stats, and table all read from that one array. 128K VRAM/RAM is missing for both current builds (monitor wasn't attached that run) — worth backfilling if you re-run it.</p>
+    <p>Both builds are fully swept now, 4K–1M. To add a new quant, model, or a rebuilt fork, run the sweep unattended and fold the new rows into this page's data.</p>
+    <pre><code>.\bench-sweep.ps1 -ContextSizes 4096,8192,16384,32768,65536,131072,262144,524288,1048576 -Label &lt;new-label&gt; -ServerExe "&lt;path-to-llama-server.exe&gt;"</code></pre>
+    <p>Results land in <code>bench\results.json</code>. Paste the new objects into the <code>DATA</code> array at the bottom of this file's script and redeploy — the charts, stats, and table all read from that one array. 128K VRAM/RAM is missing for both current builds (monitor wasn't attached that run) — worth backfilling. Run the very first context size of a fresh session as a throwaway if you want a clean number; the OS page cache is cold until something reads the 57.6GB model file once.</p>
   </footer>
 </div>
 
@@ -239,6 +239,16 @@
     { label:"poolside-fork", context:262144,  context_label:"256K", prefill_tok_s:95.8,  gen_tok_s:9.94,  peak_vram_gb:9.78, peak_ram_gb:56.4, date:"2026-07-24" },
     { label:"poolside-fork", context:524288,  context_label:"512K", prefill_tok_s:87.7,  gen_tok_s:11.24, peak_vram_gb:11.5, peak_ram_gb:60.0, date:"2026-07-24" },
     { label:"poolside-fork", context:1048576, context_label:"1M",   prefill_tok_s:21.7,  gen_tok_s:6.99,  peak_vram_gb:11.4, peak_ram_gb:63.4, date:"2026-07-24" },
+    { label:"mainline", context:4096,  context_label:"4K",  prefill_tok_s:34.48,  gen_tok_s:10.68, peak_vram_gb:6.2, peak_ram_gb:57.23, date:"2026-07-24", note:"cold OS page cache, first run of the session — not comparable to the rest of this row's build" },
+    { label:"mainline", context:8192,  context_label:"8K",  prefill_tok_s:120.53, gen_tok_s:11.36, peak_vram_gb:6.3, peak_ram_gb:57.07, date:"2026-07-24" },
+    { label:"mainline", context:16384, context_label:"16K", prefill_tok_s:121.33, gen_tok_s:11.27, peak_vram_gb:6.4, peak_ram_gb:57.11, date:"2026-07-24" },
+    { label:"mainline", context:32768, context_label:"32K", prefill_tok_s:120.21, gen_tok_s:12.28, peak_vram_gb:6.7, peak_ram_gb:56.88, date:"2026-07-24" },
+    { label:"mainline", context:65536, context_label:"64K", prefill_tok_s:120.33, gen_tok_s:12.22, peak_vram_gb:7.1, peak_ram_gb:56.94, date:"2026-07-24" },
+    { label:"poolside-fork", context:4096,  context_label:"4K",  prefill_tok_s:113.78, gen_tok_s:12.09, peak_vram_gb:6.3, peak_ram_gb:57.32, date:"2026-07-24" },
+    { label:"poolside-fork", context:8192,  context_label:"8K",  prefill_tok_s:114.51, gen_tok_s:12.16, peak_vram_gb:6.3, peak_ram_gb:57.23, date:"2026-07-24" },
+    { label:"poolside-fork", context:16384, context_label:"16K", prefill_tok_s:115.64, gen_tok_s:12.14, peak_vram_gb:6.5, peak_ram_gb:57.42, date:"2026-07-24" },
+    { label:"poolside-fork", context:32768, context_label:"32K", prefill_tok_s:114.81, gen_tok_s:12.10, peak_vram_gb:6.7, peak_ram_gb:57.58, date:"2026-07-24" },
+    { label:"poolside-fork", context:65536, context_label:"64K", prefill_tok_s:116.63, gen_tok_s:12.31, peak_vram_gb:7.1, peak_ram_gb:57.40, date:"2026-07-24" },
   ];
   const LABEL_ORDER = ["mainline", "poolside-fork"]; // fixed categorical order, never cycled
 
@@ -258,19 +268,19 @@
     const el = document.getElementById("stats");
     el.innerHTML = `
       <div class="stat">
+        <p class="label">Below 128K: no real gap</p>
+        <p class="value">113–121 <small>tok/s prefill, both builds</small></p>
+        <p class="foot">4K through 64K, warm cache — within noise of each other</p>
+      </div>
+      <div class="stat">
         <p class="label">Prefill crossover @ 512K</p>
         <p class="value">87.7 <small>vs 39.3 tok/s</small></p>
         <p class="foot">fork avoids mainline's 3x crater here — but loses again at 1M</p>
       </div>
       <div class="stat">
-        <p class="label">Generation, no clean winner</p>
-        <p class="value">7–12 <small>tok/s, either build</small></p>
-        <p class="foot">both degrade similarly once RAM nears 64GB at 1M</p>
-      </div>
-      <div class="stat">
-        <p class="label">VRAM/RAM ceiling</p>
-        <p class="value">~11.4 <small>GB VRAM, both builds match</small></p>
-        <p class="foot">RAM is the real ceiling: 63.4/64GB at 1M, both builds</p>
+        <p class="label">RAM ceiling @ 1M</p>
+        <p class="value">63.4 <small>/ 64GB, both builds</small></p>
+        <p class="foot">flat ~57GB through 64K, only climbs past 256K</p>
       </div>`;
   }
 
@@ -319,7 +329,7 @@
 
     svg.querySelectorAll(".series-dot").forEach((dot, idx) => {
       const r = dotMeta[idx].r;
-      const html = `<strong>${dotMeta[idx].label} · ${r.context_label}</strong> — ${r[metric]}${unitSuffix}`;
+      const html = `<strong>${dotMeta[idx].label} · ${r.context_label}</strong> — ${r[metric]}${unitSuffix}${r.note ? `<br><em>${r.note}</em>` : ""}`;
       dot.addEventListener("mouseenter", e => showTip(e, html));
       dot.addEventListener("mousemove", e => showTip(e, html));
       dot.addEventListener("mouseleave", hideTip);
@@ -328,12 +338,13 @@
 
   // ---- findings ----
   const FINDINGS = [
-    { tag:"No clean winner", warn:false, text:"Mainline wins prefill at 128K (117.5 vs 112.6) and 256K (117.1 vs 95.8). Poolside wins big at 512K (87.7 vs 39.3 — mainline's crater doesn't happen on the fork). Mainline wins again at 1M (24.4 vs 21.7). Progress logs were smooth in every run — a real scaling-behavior difference between builds, not measurement noise, but it doesn't make either build uniformly faster." },
-    { tag:"Decode", warn:false, text:"Both builds hover 7–12 tok/s with no consistent winner, and both degrade similarly at 1M as RAM nears its ceiling." },
-    { tag:"Cost of headroom", warn:false, text:"On both builds, prefill speed drops hard as configured <code>-c</code> grows even for the same fixed prompt — that's the cost of the allocated context capacity itself, not of tokens actually used." },
-    { tag:"VRAM tracks context, modestly", warn:false, text:"VRAM isn't flat — it climbs from ~9.8GB at 256K to ~11.4GB at 512K/1M, matching within ~0.2GB between builds at every size. Prefix-cache re-hits stay under 0.2s on both, every time (<code>sim_best=1.000</code>)." },
+    { tag:"No real gap below 128K", warn:false, text:"4K through 64K, both builds prefill at 113–121 tok/s and decode at 11–12 tok/s — differences are within run-to-run noise. The builds only start to diverge once context passes 128K." },
+    { tag:"No clean winner overall", warn:false, text:"Mainline wins prefill at 128K (117.5 vs 112.6) and 256K (117.1 vs 95.8). Poolside wins big at 512K (87.7 vs 39.3 — mainline's crater doesn't happen on the fork). Mainline wins again at 1M (24.4 vs 21.7). Progress logs were smooth in every run — a real scaling-behavior difference between builds, not measurement noise, but it doesn't make either build uniformly faster." },
+    { tag:"Decode", warn:false, text:"Both builds hover 7–12 tok/s at large context with no consistent winner, and both degrade similarly at 1M as RAM nears its ceiling." },
+    { tag:"Memory footprint", warn:false, text:"VRAM climbs smoothly with context — ~6.2GB at 4K, ~9.8GB at 256K, ~11.4GB by 512K/1M — matching within ~0.2GB between builds at every size. RAM stays flat around 57GB through 64K, then climbs past 256K. Prefix-cache re-hits stay under 0.2s on both builds, every time (<code>sim_best=1.000</code>)." },
     { tag:"Real ceiling", warn:true, text:"RAM, not VRAM, is what actually runs out at 1M — 63.4 of 64GB on both builds. 128K VRAM/RAM wasn't captured (monitor wasn't attached to that run)." },
     { tag:"Not fork-specific", warn:false, text:"The tokenizer's <code>special_eos_id</code>/<code>special_eot_id</code> metadata warnings fire on both builds — a GGUF metadata issue, not something the fork fixes or mainline uniquely has." },
+    { tag:"Methodology: cold cache", warn:true, text:"Mainline's 4K point (34.5 tok/s prefill) is a session-cold outlier, not a real context-size effect — it was the first request after boot, before the 57.6GB model file was paged into RAM. Poolside's 4K run, right after in the same session with a warm cache, came back at 113.8 tok/s — in line with everything else below 128K. Hover or check the table footnote on that point." },
   ];
   function renderFindings(){
     document.getElementById("findings").innerHTML = FINDINGS.map(f => `
@@ -348,7 +359,7 @@
     document.getElementById("table-body").innerHTML = DATA.map(r => `
       <tr>
         <td class="label-cell"><span class="pill" style="color:${CATEGORICAL[r.label]||"var(--ink-600)"}">${r.label}</span></td>
-        <td>${r.context_label}</td>
+        <td${r.note ? ` title="${r.note}" style="cursor:help;text-decoration:underline dotted var(--ink-400)"` : ""}>${r.context_label}</td>
         <td>${r.prefill_tok_s}</td>
         <td>${r.gen_tok_s}</td>
         <td>${r.peak_vram_gb != null ? r.peak_vram_gb + "GB" : "—"}</td>
